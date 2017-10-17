@@ -1,6 +1,11 @@
 package errors
 
-import "fmt"
+import (
+	"fmt"
+	"encoding/json"
+	"bytes"
+	"strings"
+)
 
 const (
 	Unknown = iota
@@ -9,6 +14,52 @@ const (
 	Err
 	Critical
 )
+
+type level int
+
+func (l level) String() string {
+	switch l {
+	case Info:
+		return "Info"
+	case Warn:
+		return "Warn"
+	case Err:
+		return "Err"
+	case Critical:
+		return "Critical"
+	}
+	return "Unknown"
+}
+
+func (l *level) Set(i int) {
+	h := level(i)
+	l = &h
+}
+
+func (l level) MarshalJSON()([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, l.String())), nil
+}
+
+func (l level) UmmarshalJSON(data []byte) error {
+	s := string(data)
+	s = strings.TrimPrefix(s, `""`)
+	s = strings.TrimSuffix(s, `""`)
+
+	switch s {
+	case "Info":
+		l.Set(Info)
+	case "Warn":
+		l.Set(Warn)
+	case "Err":
+		l.Set(Err)
+	case "Critical":
+		l.Set(Critical)
+	default:
+		l.Set(Unknown)
+	}
+
+	return nil
+}
 
 type List struct {
 	Errors map[int]*Error
@@ -41,10 +92,10 @@ func (l *List) Get(name string) *Error {
 }
 
 type Error struct {
-	Msg   string
-	Code  int
-	Level int
-	Name  string
+	Msg   string `json:"msg"`
+	Code  int `json:"code"`
+	Level level `json:"level"`
+	Name  string `json:"name"`
 }
 
 func New(msg string, options ...int) *Error {
@@ -57,7 +108,7 @@ func New(msg string, options ...int) *Error {
 		return &Error{
 			Msg:   msg,
 			Code:  options[0],
-			Level: options[1],
+			Level: level(options[1]),
 		}
 	}
 	return &Error{Msg: msg}
@@ -70,4 +121,12 @@ func (e *Error) SetName(n string) *Error {
 
 func (e *Error) Error() string {
 	return e.Msg
+}
+
+func (e Error) String() string {
+	buffer := new(bytes.Buffer)
+	if err := json.NewEncoder(buffer).Encode(e); err != nil {
+		return ""
+	}
+	return buffer.String()
 }
