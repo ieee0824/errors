@@ -6,12 +6,12 @@ const (
 	Unknown = iota
 	Info
 	Warn
-	Error
+	Err
 	Critical
 )
 
 type List struct {
-	Errors map[int]*Errors
+	Errors map[int]*Error
 	Index  map[string]int
 }
 
