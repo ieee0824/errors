@@ -1,17 +1,17 @@
 package boost
 
-import "errors"
+import (
+	"errors"
+)
 
 func Compare(err error, f func(error) bool) bool {
-	for {
-		unwrapedErr := errors.Unwrap(err)
-		if err == nil {
-			break
-		}
-		compareResult := f(unwrapedErr)
-		if compareResult {
-			return true
-		}
+	unwrappedErr := errors.Unwrap(err)
+	if unwrappedErr == nil {
+		return f(err)
 	}
-	return false
+	compareResult := f(err)
+	if compareResult {
+		return true
+	}
+	return Compare(unwrappedErr, f)
 }
